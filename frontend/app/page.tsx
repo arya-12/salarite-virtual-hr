@@ -231,6 +231,12 @@ export default function Home() {
     ),
   }));
 
+  const sortedInterviews = [...interviews].sort(
+    (a, b) =>
+      new Date(a.scheduled_at).getTime() -
+      new Date(b.scheduled_at).getTime()
+  );
+
   return (
     <>
       <main className="min-h-screen bg-slate-100 text-slate-900 transition-colors dark:bg-[#0B0E13] dark:text-slate-100">
