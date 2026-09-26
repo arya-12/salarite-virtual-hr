@@ -350,7 +350,7 @@ export default function Home() {
                   <input
                     value={candidateName}
                     onChange={(e) => setCandidateName(e.target.value)}
-                    placeholder="Priya Sharma"
+                    placeholder="Enter ur name"
                     className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-[#10141a] dark:text-slate-100 dark:focus:border-slate-500"
                     required
                   />
