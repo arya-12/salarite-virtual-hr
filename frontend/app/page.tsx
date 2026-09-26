@@ -40,10 +40,7 @@ export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
-
   const [dark, setDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
   const [title, setTitle] = useState("");
@@ -54,33 +51,36 @@ export default function Home() {
   const [scheduledAt, setScheduledAt] = useState("");
   const [mode, setMode] = useState("Video");
 
-  // ---- Initialize Theme ----
+  // ---- theme: load saved preference, respect system as fallback ----
   useEffect(() => {
-    setMounted(true);
     try {
       const saved = localStorage.getItem("salarite-theme");
-      const isDark = saved
-        ? saved === "dark"
-        : window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-      setDark(isDark);
-      document.documentElement.classList.toggle("dark", isDark);
+      if (saved) {
+        setDark(saved === "dark");
+      } else {
+        setDark(window.matchMedia("(prefers-color-scheme: dark)").matches);
+      }
     } catch {
-      /* storage error ignore */
+      /* localStorage unavailable — default to light */
     }
   }, []);
 
-  // ---- Toggle Theme Handler ----
-  const toggleTheme = () => {
-    const nextState = !dark;
-    setDark(nextState);
-    document.documentElement.classList.toggle("dark", nextState);
+  // ---- apply the class to <html> directly so it reliably wins over any
+  //      other global dark-mode CSS, and toggles cleanly both ways ----
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
 
-    try {
-      localStorage.setItem("salarite-theme", nextState ? "dark" : "light");
-    } catch {
-      /* storage error ignore */
-    }
+  const toggleTheme = () => {
+    setDark((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("salarite-theme", next ? "dark" : "light");
+      } catch {
+        /* ignore storage errors */
+      }
+      return next;
+    });
   };
 
   const notify = (message: string) => {
@@ -226,59 +226,54 @@ export default function Home() {
 
   const columns = TASK_STATUSES.map((status) => ({
     status,
-    items: tasks.filter((t) => t.status === status),
+    items: tasks.filter(
+      (t) => t.status.trim().toLowerCase() === status.toLowerCase()
+    ),
   }));
-
-  const sortedInterviews = [...interviews].sort(
-    (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
-  );
 
   return (
     <>
       <main className="min-h-screen bg-slate-100 text-slate-900 transition-colors dark:bg-[#0B0E13] dark:text-slate-100">
         {/* ================= HEADER BAND ================= */}
-        <div className="border-b border-slate-200 bg-white text-slate-900 transition-colors dark:border-white/5 dark:bg-[#14181f] dark:text-white">
+        <div className="border-b border-white/5 bg-[#14181f] text-white">
           <div className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-6 px-6 py-9">
             <div>
-              <p className="mb-1 text-xs tracking-wide text-slate-500 dark:text-slate-400">
-                Employer console
-              </p>
+              <p className="mb-1 text-xs tracking-wide text-slate-400">Employer console</p>
               <h1 className="font-serif text-3xl font-semibold">Salarite Virtual HR</h1>
-              <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
+              <p className="mt-2 max-w-md text-sm text-slate-400">
                 Assign work to your virtual HR desk and keep candidate interviews on schedule, in one board.
               </p>
               {lastSynced && (
-                <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                <p className="mt-3 text-xs text-slate-500">
                   Synced {lastSynced.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                 </p>
               )}
             </div>
 
             <div className="flex items-center gap-6">
-              <div className="flex divide-x divide-slate-200 dark:divide-slate-700">
+              <div className="flex divide-x divide-slate-700">
                 <div className="px-5">
                   <p className="font-serif text-3xl leading-none">{tasks.length}</p>
-                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Total tasks</p>
+                  <p className="mt-1.5 text-xs text-slate-400">Total tasks</p>
                 </div>
                 <div className="px-5">
-                  <p className="font-serif text-3xl leading-none text-amber-600 dark:text-amber-400">{completedCount}</p>
-                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Completed</p>
+                  <p className="font-serif text-3xl leading-none text-amber-400">{completedCount}</p>
+                  <p className="mt-1.5 text-xs text-slate-400">Completed</p>
                 </div>
                 <div className="px-5">
-                  <p className="font-serif text-3xl leading-none text-teal-600 dark:text-teal-400">{interviews.length}</p>
-                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Interviews scheduled</p>
+                  <p className="font-serif text-3xl leading-none text-teal-400">{interviews.length}</p>
+                  <p className="mt-1.5 text-xs text-slate-400">Interviews scheduled</p>
                 </div>
               </div>
 
-              {/* Theme Toggle Button */}
               <button
                 type="button"
                 onClick={toggleTheme}
                 aria-label="Toggle dark mode"
                 aria-pressed={dark}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-400 dark:hover:text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-600 text-slate-300 transition hover:border-slate-400 hover:text-white"
               >
-                {mounted && dark ? (
+                {dark ? (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4.5 w-4.5">
                     <circle cx="12" cy="12" r="4.5" />
                     <path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" strokeLinecap="round" />
@@ -295,7 +290,7 @@ export default function Home() {
 
         <div className="mx-auto max-w-7xl px-6 pb-16">
           {/* ================= FORMS ================= */}
-          <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="-mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
             <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-slate-800 dark:bg-[#171d25]">
               <h2 className="mb-4 border-b border-amber-600/70 pb-3 font-serif text-lg font-medium dark:border-amber-500/60">
                 Assign a task
@@ -480,7 +475,7 @@ export default function Home() {
           {toasts.map((t) => (
             <div
               key={t.id}
-              className="rounded-md bg-slate-900 px-5 py-2.5 text-sm text-white shadow-lg dark:bg-slate-800"
+              className="rounded-md bg-[#14181f] px-5 py-2.5 text-sm text-white shadow-lg dark:bg-slate-800"
             >
               {t.message}
             </div>
